@@ -5,23 +5,23 @@ spring:
         webflux:
           routes:
             - id: auth-service
-              uri: ${AUTH_SERVICE_URL:http://auth-service:8080}
+              uri: ${AUTH_SERVICE_URL:http://localhost:8083}
               predicates:
                 - Path=/auth/**
               filters:
                 - RewritePath=/auth/(?<segment>.*), /auth/${segment}
 
             - id: user-service
-              uri: ${USER_SERVICE_URL:http://user-service:8080}
+              uri: ${USER_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/api/users/**,/api/cards/**
 
             - id: order-service
-              uri: ${ORDER_SERVICE_URL:http://order-service:8080}
+              uri: ${ORDER_SERVICE_URL:http://localhost:8082}
               predicates:
                 - Path=/api/orders/**
 
 services:
-  auth-service-url: ${AUTH_SERVICE_URL:http://auth-service:8080}
-  user-service-url: ${USER_SERVICE_URL:http://user-service:8080}
-  order-service-url: ${ORDER_SERVICE_URL:http://order-service:8080}
+  auth-service-url: ${AUTH_SERVICE_URL:http://localhost:8083}
+  user-service-url: ${USER_SERVICE_URL:http://localhost:8081}
+  order-service-url: ${ORDER_SERVICE_URL:http://localhost:8082}

@@ -1,0 +1,156 @@
+version: '3.8'
+
+services:
+
+  auth-postgres:
+    image: postgres:16-alpine
+    container_name: auth-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${AUTH_DB}
+      POSTGRES_USER: ${AUTH_USER}
+      POSTGRES_PASSWORD: ${AUTH_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_USER} -d ${AUTH_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    restart: always
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:postgresql://auth-postgres:5432/${AUTH_DB}
+      DB_USERNAME: ${AUTH_USER}
+      DB_PASSWORD: ${AUTH_PASSWORD}
+    ports:
+      - "8083:8080"
+    env_file:
+      - .env
+
+  user-postgres:
+    image: postgres:16-alpine
+    container_name: user-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${USER_DB}
+      POSTGRES_USER: ${USER_USER}
+      POSTGRES_PASSWORD: ${USER_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - user-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${USER_USER} -d ${USER_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-redis:
+    image: redis:7-alpine
+    container_name: user-redis
+    restart: always
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    ports:
+      - "6380:6379"
+    volumes:
+      - user-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    restart: always
+    depends_on:
+      user-postgres:
+        condition: service_healthy
+      user-redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:postgresql://user-postgres:5432/${USER_DB}
+      DB_USERNAME: ${USER_USER}
+      DB_PASSWORD: ${USER_PASSWORD}
+      REDIS_HOST: user-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "8081:8080"
+    env_file:
+      - .env
+
+  order-postgres:
+    image: postgres:16-alpine
+    container_name: order-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${ORDER_DB}
+      POSTGRES_USER: ${ORDER_USER}
+      POSTGRES_PASSWORD: ${ORDER_PASSWORD}
+    ports:
+      - "5435:5432"
+    volumes:
+      - order-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ORDER_USER} -d ${ORDER_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    restart: always
+    depends_on:
+      order-postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:postgresql://order-postgres:5432/${ORDER_DB}
+      DB_USERNAME: ${ORDER_USER}
+      DB_PASSWORD: ${ORDER_PASSWORD}
+    ports:
+      - "8082:8080"
+    env_file:
+      - .env
+
+  gateway:
+    build: ./gateway
+    container_name: gateway
+    restart: always
+    depends_on:
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVICES_AUTH_SERVICE_URL: http://auth-service:8080
+      SERVICES_USER_SERVICE_URL: http://user-service:8080
+      SERVICES_ORDER_SERVICE_URL: http://order-service:8080
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+
+volumes:
+  auth-postgres-data:
+  user-postgres-data:
+  order-postgres-data:
+  user-redis-data:
