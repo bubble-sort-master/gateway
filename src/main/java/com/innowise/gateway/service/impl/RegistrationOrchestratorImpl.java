@@ -1,4 +1,4 @@
-package com.innowise.gateway.service;
+package com.innowise.gateway.service.impl;
 
 import com.innowise.gateway.client.AuthClient;
 import com.innowise.gateway.client.UserClient;
@@ -6,6 +6,7 @@ import com.innowise.gateway.dto.CredentialsRequest;
 import com.innowise.gateway.dto.RegistrationRequest;
 import com.innowise.gateway.dto.RegistrationResponse;
 import com.innowise.gateway.dto.UserCreateDto;
+import com.innowise.gateway.service.RegistrationOrchestrator;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import io.github.resilience4j.reactor.retry.RetryOperator;
@@ -18,7 +19,7 @@ import reactor.core.publisher.Mono;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class RegistrationOrchestratorImpl {
+public class RegistrationOrchestratorImpl implements RegistrationOrchestrator {
 
   private final UserClient userClient;
   private final AuthClient authClient;
@@ -26,6 +27,7 @@ public class RegistrationOrchestratorImpl {
   private final CircuitBreaker userCircuitBreaker;
   private final Retry rollbackRetry;
 
+  @Override
   public Mono<RegistrationResponse> register(RegistrationRequest request) {
     var userCreateDto = new UserCreateDto(
             request.name(), request.surname(), request.birthDate(), request.email());

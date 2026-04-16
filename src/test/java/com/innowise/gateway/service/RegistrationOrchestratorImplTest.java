@@ -3,6 +3,7 @@ package com.innowise.gateway.service;
 import com.innowise.gateway.client.AuthClient;
 import com.innowise.gateway.client.UserClient;
 import com.innowise.gateway.dto.*;
+import com.innowise.gateway.service.impl.RegistrationOrchestratorImpl;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
