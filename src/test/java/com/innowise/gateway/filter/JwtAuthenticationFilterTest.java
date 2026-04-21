@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
@@ -30,6 +31,15 @@ class JwtAuthenticationFilterTest {
 
   @InjectMocks
   private JwtAuthenticationFilter filter;
+
+  private Jwt createJwt(String token, String type) {
+    return Jwt.withTokenValue(token)
+            .header("alg", "HS256")
+            .subject("123")
+            .claim("role", "USER")
+            .claim("token_type", type)
+            .build();
+  }
 
   @Test
   void filter_shouldPermitPublicEndpointWithoutToken() {
@@ -62,7 +72,8 @@ class JwtAuthenticationFilterTest {
             MockServerHttpRequest.get("/api/users/123")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer invalid.token")
     );
-    when(jwtTokenProvider.validateToken("invalid.token")).thenReturn(false);
+
+    when(jwtTokenProvider.decode("invalid.token")).thenThrow(new RuntimeException());
 
     filter.filter(exchange, filterChain).block();
 
@@ -73,36 +84,40 @@ class JwtAuthenticationFilterTest {
   @Test
   void filter_shouldAddHeadersAndForwardWhenValidAccessToken() {
     String token = "valid.access.token";
+    Jwt jwt = createJwt(token, "access");
+
     MockServerWebExchange exchange = MockServerWebExchange.from(
             MockServerHttpRequest.get("/api/users/123")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
     );
 
-    when(jwtTokenProvider.validateToken(token)).thenReturn(true);
-    when(jwtTokenProvider.isAccessToken(token)).thenReturn(true);
-    when(jwtTokenProvider.getUserIdFromToken(token)).thenReturn(123L);
-    when(jwtTokenProvider.getRoleFromToken(token)).thenReturn("USER");
+    when(jwtTokenProvider.decode(token)).thenReturn(jwt);
+    when(jwtTokenProvider.isAccessToken(jwt)).thenReturn(true);
+    when(jwtTokenProvider.getUserIdFromToken(jwt)).thenReturn(123L);
+    when(jwtTokenProvider.getRoleFromToken(jwt)).thenReturn("USER");
 
-    ArgumentCaptor<ServerWebExchange> exchangeCaptor = ArgumentCaptor.forClass(ServerWebExchange.class);
-    when(filterChain.filter(exchangeCaptor.capture())).thenReturn(Mono.empty());
+    ArgumentCaptor<ServerWebExchange> captor = ArgumentCaptor.forClass(ServerWebExchange.class);
+    when(filterChain.filter(captor.capture())).thenReturn(Mono.empty());
 
     filter.filter(exchange, filterChain).block();
 
-    ServerWebExchange mutatedExchange = exchangeCaptor.getValue();
-    assertThat(mutatedExchange.getRequest().getHeaders().getFirst("X-User-Id")).isEqualTo("123");
-    assertThat(mutatedExchange.getRequest().getHeaders().getFirst("X-User-Role")).isEqualTo("USER");
+    ServerWebExchange mutated = captor.getValue();
+    assertThat(mutated.getRequest().getHeaders().getFirst("X-User-Id")).isEqualTo("123");
+    assertThat(mutated.getRequest().getHeaders().getFirst("X-User-Role")).isEqualTo("USER");
   }
 
   @Test
   void filter_shouldReturnUnauthorizedWhenRefreshTokenUsedForProtectedEndpoint() {
     String token = "valid.refresh.token";
+    Jwt jwt = createJwt(token, "refresh");
+
     MockServerWebExchange exchange = MockServerWebExchange.from(
             MockServerHttpRequest.get("/api/users/123")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
     );
 
-    when(jwtTokenProvider.validateToken(token)).thenReturn(true);
-    when(jwtTokenProvider.isAccessToken(token)).thenReturn(false);
+    when(jwtTokenProvider.decode(token)).thenReturn(jwt);
+    when(jwtTokenProvider.isAccessToken(jwt)).thenReturn(false);
 
     filter.filter(exchange, filterChain).block();
 

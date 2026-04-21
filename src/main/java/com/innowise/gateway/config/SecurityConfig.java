@@ -16,7 +16,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
-  private final JwtConfig jwtConfig;
 
   @Bean
   public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {

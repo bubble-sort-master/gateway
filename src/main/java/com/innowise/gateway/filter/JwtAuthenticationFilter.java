@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
@@ -42,24 +43,26 @@ public class JwtAuthenticationFilter implements WebFilter {
 
     String token = authHeader.substring(7).trim();
 
-    if (!jwtTokenProvider.validateToken(token) || !jwtTokenProvider.isAccessToken(token)) {
-      return unauthorized(exchange.getResponse());
-    }
-
+    Jwt jwt;
     try {
-      Long userId = jwtTokenProvider.getUserIdFromToken(token);
-      String role = jwtTokenProvider.getRoleFromToken(token);
-
-      ServerHttpRequest mutated = exchange.getRequest().mutate()
-              .header("X-User-Id", userId.toString())
-              .header("X-User-Role", role)
-              .build();
-
-      return chain.filter(exchange.mutate().request(mutated).build());
+      jwt = jwtTokenProvider.decode(token);
     } catch (Exception e) {
-      log.error("Token processing failed", e);
       return unauthorized(exchange.getResponse());
     }
+
+    if (!jwtTokenProvider.isAccessToken(jwt)) {
+      return unauthorized(exchange.getResponse());
+    }
+
+    Long userId = jwtTokenProvider.getUserIdFromToken(jwt);
+    String role = jwtTokenProvider.getRoleFromToken(jwt);
+
+    ServerHttpRequest mutated = exchange.getRequest().mutate()
+            .header("X-User-Id", userId.toString())
+            .header("X-User-Role", role)
+            .build();
+
+    return chain.filter(exchange.mutate().request(mutated).build());
   }
 
   private Mono<Void> unauthorized(ServerHttpResponse response) {

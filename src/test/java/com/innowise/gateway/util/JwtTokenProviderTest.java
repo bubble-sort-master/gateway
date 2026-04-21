@@ -1,6 +1,5 @@
 package com.innowise.gateway.util;
 
-import com.innowise.gateway.config.JwtConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,70 +16,64 @@ import static org.mockito.Mockito.when;
 class JwtTokenProviderTest {
 
   @Mock
-  private JwtConfig jwtConfig;
-
-  @Mock
   private JwtDecoder jwtDecoder;
 
   @InjectMocks
   private JwtTokenProvider jwtTokenProvider;
 
-  private final String validToken = "valid.token";
-
-  private Jwt createValidJwt(String token, String tokenType) {
+  private Jwt createJwt(String token, String type) {
     return Jwt.withTokenValue(token)
             .header("alg", "HS256")
             .subject("123")
             .claim("role", "USER")
-            .claim("token_type", tokenType)
+            .claim("token_type", type)
             .build();
   }
 
   @Test
-  void validateToken_shouldReturnTrueForValidToken() {
-    Jwt validJwt = createValidJwt(validToken, "access");
-    when(jwtDecoder.decode(validToken)).thenReturn(validJwt);
-    assertThat(jwtTokenProvider.validateToken(validToken)).isTrue();
+  void decode_shouldReturnJwtForValidToken() {
+    Jwt jwt = createJwt("valid", "access");
+    when(jwtDecoder.decode("valid")).thenReturn(jwt);
+    assertThat(jwtTokenProvider.decode("valid")).isEqualTo(jwt);
   }
 
   @Test
-  void validateToken_shouldReturnFalseForInvalidToken() {
+  void decode_shouldThrowForInvalidToken() {
     when(jwtDecoder.decode("invalid")).thenThrow(new JwtException("Invalid"));
-    assertThat(jwtTokenProvider.validateToken("invalid")).isFalse();
+    try {
+      jwtTokenProvider.decode("invalid");
+    } catch (Exception e) {
+      assertThat(e).isInstanceOf(JwtException.class);
+    }
   }
 
   @Test
   void getUserIdFromToken_shouldReturnCorrectId() {
-    Jwt jwt = createValidJwt(validToken, "access");
-    when(jwtDecoder.decode(validToken)).thenReturn(jwt);
-    assertThat(jwtTokenProvider.getUserIdFromToken(validToken)).isEqualTo(123L);
+    Jwt jwt = createJwt("t", "access");
+    assertThat(jwtTokenProvider.getUserIdFromToken(jwt)).isEqualTo(123L);
   }
 
   @Test
   void getRoleFromToken_shouldReturnCorrectRole() {
-    Jwt jwt = createValidJwt(validToken, "access");
-    when(jwtDecoder.decode(validToken)).thenReturn(jwt);
-    assertThat(jwtTokenProvider.getRoleFromToken(validToken)).isEqualTo("USER");
+    Jwt jwt = createJwt("t", "access");
+    assertThat(jwtTokenProvider.getRoleFromToken(jwt)).isEqualTo("USER");
   }
 
   @Test
-  void isAccessToken_shouldReturnTrueForAccessToken() {
-    Jwt jwt = createValidJwt(validToken, "access");
-    when(jwtDecoder.decode(validToken)).thenReturn(jwt);
-    assertThat(jwtTokenProvider.isAccessToken(validToken)).isTrue();
+  void isAccessToken_shouldReturnTrueForAccess() {
+    Jwt jwt = createJwt("t", "access");
+    assertThat(jwtTokenProvider.isAccessToken(jwt)).isTrue();
   }
 
   @Test
-  void isAccessToken_shouldReturnFalseForRefreshToken() {
-    Jwt jwt = createValidJwt("refresh.token", "refresh");
-    when(jwtDecoder.decode("refresh.token")).thenReturn(jwt);
-    assertThat(jwtTokenProvider.isAccessToken("refresh.token")).isFalse();
+  void isAccessToken_shouldReturnFalseForRefresh() {
+    Jwt jwt = createJwt("t", "refresh");
+    assertThat(jwtTokenProvider.isAccessToken(jwt)).isFalse();
   }
 
   @Test
-  void isRefreshToken_shouldReturnTrueForRefreshToken() {
-    Jwt jwt = createValidJwt("refresh.token", "refresh");
-    when(jwtDecoder.decode("refresh.token")).thenReturn(jwt);
-    assertThat(jwtTokenProvider.isRefreshToken("refresh.token")).isTrue();
+  void isRefreshToken_shouldReturnTrueForRefresh() {
+    Jwt jwt = createJwt("t", "refresh");
+    assertThat(jwtTokenProvider.isRefreshToken(jwt)).isTrue();
   }
 }
