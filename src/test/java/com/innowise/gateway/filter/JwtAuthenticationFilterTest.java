@@ -44,7 +44,7 @@ class JwtAuthenticationFilterTest {
   @Test
   void filter_shouldPermitPublicEndpointWithoutToken() {
     MockServerWebExchange exchange = MockServerWebExchange.from(
-            MockServerHttpRequest.get("/auth/login")
+            MockServerHttpRequest.get("/auth/token")
     );
     when(filterChain.filter(any())).thenReturn(Mono.empty());
 

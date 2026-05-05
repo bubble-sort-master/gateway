@@ -11,3 +11,7 @@ jwt:
   secret: ${JWT_SECRET:local-secret-key-32-chars-minimum}
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900000}
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000}
+logging:
+  level:
+    reactor.netty.http.server: DEBUG
+    com.innowise.gateway.filter: DEBUG

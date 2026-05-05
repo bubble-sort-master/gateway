@@ -29,14 +29,14 @@ class GatewayIntegrationTest {
 
   @Test
   void publicLoginEndpoint_shouldBeAccessibleWithoutToken() {
-    stubFor(post("/auth/login")
+    stubFor(post("/auth/token")
             .willReturn(aResponse()
                     .withStatus(200)
                     .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
                     .withBody("{\"token\": \"fake-jwt\"}")));
 
     webTestClient.post()
-            .uri("/auth/login")
+            .uri("/auth/token")
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue("{\"username\":\"user\",\"password\":\"pass\"}")
             .exchange()

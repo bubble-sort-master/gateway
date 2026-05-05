@@ -23,7 +23,7 @@ public class SecurityConfig {
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .cors(ServerHttpSecurity.CorsSpec::disable)
             .authorizeExchange(ex -> ex
-                    .pathMatchers("/auth/login", "/auth/register").permitAll()
+                    .pathMatchers("/auth/token", "/auth/register", "/auth/refresh", "/auth/validate").permitAll()
                     .anyExchange().authenticated()
             )
             .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)

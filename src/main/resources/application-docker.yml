@@ -21,6 +21,16 @@ spring:
               predicates:
                 - Path=/api/orders/**
 
+            - id: payment-service
+              uri: ${PAYMENT_SERVICE_URL:http://payment-service:8080}
+              predicates:
+                - Path=/api/payments/**
+  web:
+    error:
+      include-message: always
+      include-binding-errors: always
+      include-exception: true
+
 services:
   auth-service-url: ${AUTH_SERVICE_URL:http://auth-service:8080}
   user-service-url: ${USER_SERVICE_URL:http://user-service:8080}

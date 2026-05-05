@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.3'
 
 services:
 
@@ -21,17 +21,19 @@ services:
       retries: 5
 
   auth-service:
-    build: ./auth-service
+    build: ../auth-service
     container_name: auth-service
     restart: always
     depends_on:
-      auth-postgres:
-        condition: service_healthy
+      - auth-postgres
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_URL: jdbc:postgresql://auth-postgres:5432/${AUTH_DB}
       DB_USERNAME: ${AUTH_USER}
       DB_PASSWORD: ${AUTH_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION}
+      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION}
     ports:
       - "8083:8080"
     env_file:
@@ -70,15 +72,38 @@ services:
       timeout: 5s
       retries: 5
 
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    restart: always
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+
   user-service:
-    build: ./user-service
+    build: ../user-service
     container_name: user-service
     restart: always
     depends_on:
-      user-postgres:
-        condition: service_healthy
-      user-redis:
-        condition: service_healthy
+      - user-postgres
+      - user-redis
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_URL: jdbc:postgresql://user-postgres:5432/${USER_DB}
@@ -87,6 +112,9 @@ services:
       REDIS_HOST: user-redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION}
+      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION}
     ports:
       - "8081:8080"
     env_file:
@@ -111,39 +139,79 @@ services:
       retries: 5
 
   order-service:
-    build: ./order-service
+    build: ../order-service
     container_name: order-service
     restart: always
     depends_on:
-      order-postgres:
-        condition: service_healthy
+      - order-postgres
+      - kafka
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_URL: jdbc:postgresql://order-postgres:5432/${ORDER_DB}
       DB_USERNAME: ${ORDER_USER}
       DB_PASSWORD: ${ORDER_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION}
+      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION}
+      USER_SERVICE_URL: http://user-service:8080
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - "8082:8080"
     env_file:
       - .env
 
+  payment-mongo:
+    image: mongo:4.4
+    container_name: payment-mongo
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: payment-service
+    ports:
+      - "27017:27017"
+    volumes:
+      - payment-mongo-data:/data/db
+
+  payment-service:
+    build: ../payment-service
+    container_name: payment-service
+    restart: always
+    depends_on:
+      - payment-mongo
+      - kafka
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      MONGODB_URI: mongodb://payment-mongo:27017/payment-service
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      RANDOM_NUMBER_SERVICE_URL: http://random-number-service:8080
+    ports:
+      - "8084:8080"
+    env_file:
+      - .env
+
+  random-number-service:
+    image: wiremock/wiremock:3.3.1
+    container_name: random-number-service
+    restart: always
+    volumes:
+      - ./wiremock/mappings:/home/wiremock/mappings
+
   gateway:
-    build: ./gateway
+    build: .
     container_name: gateway
     restart: always
     depends_on:
-      auth-service:
-        condition: service_started
-      user-service:
-        condition: service_started
-      order-service:
-        condition: service_started
+      - auth-service
+      - user-service
+      - order-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SERVICES_AUTH_SERVICE_URL: http://auth-service:8080
-      SERVICES_USER_SERVICE_URL: http://user-service:8080
-      SERVICES_ORDER_SERVICE_URL: http://order-service:8080
+      AUTH_SERVICE_URL: http://auth-service:8080
+      USER_SERVICE_URL: http://user-service:8080
+      ORDER_SERVICE_URL: http://order-service:8080
+      PAYMENT_SERVICE_URL: http://payment-service:8080
       JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION}
+      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION}
     ports:
       - "8080:8080"
     env_file:
@@ -154,3 +222,4 @@ volumes:
   user-postgres-data:
   order-postgres-data:
   user-redis-data:
+  payment-mongo-data:
