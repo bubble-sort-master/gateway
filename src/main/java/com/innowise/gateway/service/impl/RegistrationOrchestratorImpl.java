@@ -45,9 +45,9 @@ public class RegistrationOrchestratorImpl implements RegistrationOrchestrator {
                       .then(Mono.just(new RegistrationResponse(userId, "User registered successfully")))
                       .onErrorResume(e -> {
                         log.error("Auth failed. Rollback user {}", userId, e);
-                        return userClient.deleteUser(userId)
-                                .transformDeferred(RetryOperator.of(rollbackRetry))
-                                .then(Mono.error(new RuntimeException("Registration failed. User soft-deleted.", e)));
+                          return userClient.rollbackUser(userId)
+                                  .transformDeferred(RetryOperator.of(rollbackRetry))
+                                  .then(Mono.error(new RuntimeException("Registration failed. User soft-deleted.", e)));
                       });
             });
   }

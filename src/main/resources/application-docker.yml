@@ -35,3 +35,10 @@ services:
   auth-service-url: ${AUTH_SERVICE_URL:http://auth-service:8080}
   user-service-url: ${USER_SERVICE_URL:http://user-service:8080}
   order-service-url: ${ORDER_SERVICE_URL:http://order-service:8080}
+
+management:
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true

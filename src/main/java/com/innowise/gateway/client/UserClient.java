@@ -3,6 +3,7 @@ package com.innowise.gateway.client;
 import com.innowise.gateway.dto.UserCreateDto;
 import com.innowise.gateway.dto.UserShortDto;
 import com.innowise.gateway.config.UriConfig;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -11,6 +12,9 @@ import reactor.core.publisher.Mono;
 public class UserClient {
 
   private final WebClient webClient;
+
+  @Value("${internal.secret}")
+  private String internalSecret;
 
   public UserClient(WebClient.Builder builder, UriConfig uriConfig) {
     this.webClient = builder.baseUrl(uriConfig.getUserServiceUrl()).build();
@@ -24,9 +28,10 @@ public class UserClient {
             .bodyToMono(UserShortDto.class);
   }
 
-  public Mono<Void> deleteUser(Long userId) {
+  public Mono<Void> rollbackUser(Long userId) {
     return webClient.delete()
-            .uri("/api/users/{id}", userId)
+            .uri("/api/internal/users/{id}/rollback", userId)
+            .header("X-Internal-Secret", internalSecret)
             .retrieve()
             .bodyToMono(Void.class);
   }

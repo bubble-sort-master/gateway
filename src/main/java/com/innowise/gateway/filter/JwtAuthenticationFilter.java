@@ -27,7 +27,7 @@ public class JwtAuthenticationFilter implements WebFilter {
   private final JwtTokenProvider jwtTokenProvider;
 
   private static final List<String> PERMIT_ALL = List.of(
-          "/auth/token", "/auth/register", "/auth/refresh", "/auth/validate"
+          "/auth/token", "/auth/register", "/auth/refresh", "/auth/validate", "/actuator"
   );
 
   @Override
