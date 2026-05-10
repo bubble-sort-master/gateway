@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/random"
+  },
+  "response": {
+    "status": 200,
+    "body": "{\"number\": {{randomInt}} }",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "transformers": ["response-template"]
+  }
+}
