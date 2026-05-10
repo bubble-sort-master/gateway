@@ -20,7 +20,7 @@ services:
       retries: 5
 
   auth-service:
-    build: ../auth-service
+    image: tintinnabuli/auth-service:latest
     container_name: auth-service
     restart: always
     depends_on:
@@ -103,7 +103,7 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
   user-service:
-    build: ../user-service
+    image: tintinnabuli/user-service:latest
     container_name: user-service
     restart: always
     depends_on:
@@ -147,7 +147,7 @@ services:
       retries: 5
 
   order-service:
-    build: ../order-service
+    image: tintinnabuli/order-service:latest
     container_name: order-service
     restart: always
     depends_on:
@@ -200,7 +200,7 @@ services:
       "
 
   payment-service:
-    build: ../payment-service
+    image: tintinnabuli/payment-service:latest
     container_name: payment-service
     restart: always
     depends_on:
@@ -226,7 +226,7 @@ services:
       - ./wiremock/mappings:/home/wiremock/mappings
 
   gateway:
-    build: .
+    image: tintinnabuli/gateway:latest
     container_name: gateway
     restart: always
     depends_on:
