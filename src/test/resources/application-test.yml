@@ -47,3 +47,5 @@ resilience4j:
         timeoutDuration: 2s
       user-service:
         timeoutDuration: 2s
+internal:
+  secret: test-internal-secret-value

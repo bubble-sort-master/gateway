@@ -1,6 +1,7 @@
 package com.innowise.gateway.integration;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.innowise.gateway.dto.RegistrationRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.wiremock.spring.EnableWireMock;
+
+import java.time.LocalDate;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
@@ -89,35 +92,24 @@ class GatewayIntegrationTest {
   @Test
   void register_authFails_shouldRollbackUser() {
     stubFor(post(urlEqualTo("/api/users"))
-            .willReturn(aResponse().withStatus(201)
-                    .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+            .willReturn(aResponse()
+                    .withStatus(201)
+                    .withHeader("Content-Type", "application/json")
                     .withBody("{\"id\":1}")));
-
     stubFor(post(urlEqualTo("/auth/register"))
             .willReturn(aResponse().withStatus(500)));
-
-    stubFor(delete(urlEqualTo("/api/users/1"))
-            .willReturn(aResponse().withStatus(204)));
-
-    String requestBody = """
-                {
-                  "username": "john_doe",
-                  "password": "secret",
-                  "name": "John",
-                  "surname": "Doe",
-                  "birthDate": "1990-01-01",
-                  "email": "john@example.com"
-                }
-                """;
+    stubFor(delete(urlEqualTo("/api/internal/users/1/rollback"))
+            .willReturn(aResponse().withStatus(200)));
 
     webTestClient.post()
             .uri("/auth/register")
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(requestBody)
+            .bodyValue(new RegistrationRequest(
+                    "john_doe", "secret", "John", "Doe",
+                    LocalDate.of(1990, 1, 1), "john@example.com"))
             .exchange()
             .expectStatus().is5xxServerError();
 
-    verify(deleteRequestedFor(urlEqualTo("/api/users/1")));
+    verify(deleteRequestedFor(urlEqualTo("/api/internal/users/1/rollback")));
   }
 
   @Test

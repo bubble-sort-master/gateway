@@ -57,7 +57,6 @@ class RegistrationOrchestratorImplTest {
     userCircuitBreaker = cbRegistry.circuitBreaker("user-service");
     authCircuitBreaker = cbRegistry.circuitBreaker("auth-service");
 
-
     RetryConfig retryConfig = RetryConfig.custom()
             .maxAttempts(1)
             .waitDuration(Duration.ZERO)
@@ -69,7 +68,7 @@ class RegistrationOrchestratorImplTest {
             authCircuitBreaker, userCircuitBreaker, rollbackRetry);
   }
 
-  /*@Test
+  @Test
   void register_shouldSucceedAndReturnResponse() {
     UserShortDto userDto = new UserShortDto(1L);
     when(userClient.createUser(any(UserCreateDto.class))).thenReturn(Mono.just(userDto));
@@ -81,7 +80,7 @@ class RegistrationOrchestratorImplTest {
 
     verify(userClient).createUser(any(UserCreateDto.class));
     verify(authClient).register(any(CredentialsRequest.class));
-    verify(userClient, never()).deleteUser(anyLong());
+    verify(userClient, never()).rollbackUser(anyLong());
   }
 
   @Test
@@ -90,17 +89,17 @@ class RegistrationOrchestratorImplTest {
     when(userClient.createUser(any(UserCreateDto.class))).thenReturn(Mono.just(userDto));
     when(authClient.register(any(CredentialsRequest.class)))
             .thenReturn(Mono.error(new RuntimeException("Auth service unavailable")));
-    when(userClient.deleteUser(1L)).thenReturn(Mono.empty());
+    when(userClient.rollbackUser(1L)).thenReturn(Mono.empty());
 
     StepVerifier.create(orchestrator.register(request))
             .expectErrorSatisfies(throwable -> {
               assertThat(throwable)
                       .isInstanceOf(RuntimeException.class)
-                      .hasMessageContaining("Registration failed");
+                      .hasMessageContaining("Registration failed. User soft-deleted.");
             })
             .verify();
 
-    verify(userClient).deleteUser(1L);
+    verify(userClient).rollbackUser(1L);
   }
 
   @Test
@@ -113,6 +112,6 @@ class RegistrationOrchestratorImplTest {
             .verify();
 
     verify(authClient, never()).register(any());
-    verify(userClient, never()).deleteUser(anyLong());
-  }*/
+    verify(userClient, never()).rollbackUser(anyLong());
+  }
 }
